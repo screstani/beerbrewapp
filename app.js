@@ -6,12 +6,12 @@ let listItems = [];
 //FUNCTIONS
 function handleFormSubmit(e) {
     e.preventDefault();
-    const name = recipeForm.querySelector('#name').value;
-    const method = recipeForm.querySelector('#method').value;
-    const roast = recipeForm.querySelector('#roast').value;
-    const grind = recipeForm.querySelector('#grind').value;
-    const ratio = recipeForm.querySelector('#ratio').value;
-    const note = recipeForm.querySelector('#note').value;
+    const name = DOMPurify.sanitize(recipeForm.querySelector('#name').value);
+    const method = DOMPurify.sanitize(recipeForm.querySelector('#method').value);
+    const roast = DOMPurify.sanitize(recipeForm.querySelector('#roast').value);
+    const grind = DOMPurify.sanitize(recipeForm.querySelector('#grind').value);
+    const ratio = DOMPurify.sanitize(recipeForm.querySelector('#ratio').value);
+    const note = DOMPurify.sanitize(recipeForm.querySelector('#note').value);
     const newRecipe = {
         name,
         method,
@@ -23,7 +23,7 @@ function handleFormSubmit(e) {
     }
     listItems.push(newRecipe);
     e.target.reset();
-    displayRecipes();
+    recipeContainer.dispatchEvent(new CustomEvent('refreshRecipes'));
 }
 
 function displayRecipes() {
@@ -41,11 +41,38 @@ function displayRecipes() {
                         <li><strong>Method: </strong>${item.ratio}</li>
                         ${!item.note.length ? "" : `<li><strong>Method: </strong>${item.note}</li>`}
                     </ul>
+                    <button class="btn btn-lg btn-outline-danger" aria-label="Delete ${item.name}"
+                     value="${item.id}">Delete Recipe
+                    </button>
                 </div>
             </div>
         </div>
-    `)
+        `).join('');
+    recipeContainer.innerHTML = tempString;
 }
 
+function mirrorStateToLocalStorage() {
+    localStorage.setItem('recipeContainer.list', JSON.stringify(listItem));
+}
+
+function loadinitialUI() {
+    const tempLocalStorage = localStorage.getItem('recipeContainer.list');
+    if(tempLocalStorage === null || tempLocalStorage === []) return;
+    const tempRecipes = JSON.parse(tempLocalStorage);
+    listItems.push(...tempRecipes);
+    recipeContainer.dispatchEvent(new CustomEvent('refreshRecipes'));
+}
+
+function deleteRecipeFromList(id) {
+     listItems = listItems.filter(item => item.id !== id);
+}
 //EVENT LISTENERS
 recipeForm.addEventListener('submit', handleFormSubmit);
+recipeContainer.addEventListener('refreshRecipes', displayRecipes);
+recipeContainer.addEventListener('refreshRecipes', mirrorStateToLocalStorage);
+window.addEventListener('DOMContentLoaded', loadInitialUI);
+recipeContainer.addEventListener('click', (e) => {
+    if(e.target.matches('.btn-outline-danger')){
+        deleteRecipeFromList(Number(e.target.value));
+    };
+})
